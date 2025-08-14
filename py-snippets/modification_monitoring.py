@@ -21,7 +21,7 @@ def monitor_file_changes(path: str, callback, interval: int = 5):
             last_mtime = current_mtime
         time.sleep(interval)
 
-# example usage:
+# Example usage:
 # def on_file_change():
 #     print("File modified, reloading...")
 #
