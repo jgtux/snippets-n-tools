@@ -1,0 +1,144 @@
+#!/bin/sh
+
+# System Info
+sysinfo(){
+    local uname="$(uname -sr)"
+    echo " $uname "
+}
+
+# Current Date
+date_(){
+    local data="$(date '+%a %d-%b-%y')"
+    echo " $data "
+}
+
+# Current Time
+time_(){
+    local tempo="$(date '+%H:%M:%S')"
+    echo " $tempo "
+}
+
+# Battery Info
+battery(){
+    local id="BAT0"
+    local path="/sys/class/power_supply/$id"
+    if [ ! -d $path ]; then
+        echo " BAT N/A "
+        return 
+    fi
+    local cap="$(cat /sys/class/power_supply/$id/capacity)"
+    local stat="$(cat /sys/class/power_supply/$id/status)"
+    echo " $stat ${cap}% "
+}
+
+# Volume Info
+volume(){
+    if command -v pamixer >/dev/null 2>&1; then
+        local vol="$(pamixer --get-volume)"
+        local mute="$(pamixer --get-mute)"
+        if [ "$mute" = "true" ]; then
+            echo " MUTE "
+        else
+            echo " VOL [${vol}%] "
+        fi
+    elif command -v amixer >/dev/null 2>&1; then
+        local vol="$(amixer sget Master | awk -F'[][]' '/%/ {print $2}' | head -n1)"
+        local stat="$(amixer sget Master | awk '/\[off\]/')"
+        if [ -n "$stat" ]; then
+            echo " MUTE "
+        else
+            echo " VOL $vol "
+        fi
+    else
+        echo " VOL N/A "
+    fi
+}
+
+# Weather Info
+weather(){
+    local location="campinas"
+    local weather_data="$(curl -s wttr.in/${location}?format=1)"
+    local wea="$(echo "$weather_data" | cut -d " " -f4)"
+    echo " WEA $wea "
+}
+
+# Network info
+network(){
+    local iface="$(ip route 2>/dev/null | awk '/default/ {print $5}' | head -n1)"
+    if [ -z "$iface" ]; then
+        echo " NET N/A "
+        return
+    fi
+    local ip="$(ip addr show "$iface" | awk '/inet / {print $2}' | cut -d/ -f1 | head -n1)"
+    if [ -n "$ip" ]; then
+        echo " NET ${iface^^} $ip "
+    else
+        echo " NET ${iface^^} N/A "
+    fi
+}
+
+# Resources Usage Info
+usage(){
+    local disk="/dev/nvme0n1p2"
+    local disk2=""  
+    local ramu="$(free | awk '/Mem/ {printf "%dM/%dM", $3/1024, $2/1024}')"
+    local cpuu="$(top -bn1 | awk '/^%Cpu/ {print 100 - $8}' | cut -d. -f1)"   
+    local dfu="$(df -h $disk | awk 'NR==2 {print $3 "/" $2}')"
+
+    if [ -n "$disk2" ]; then
+        local dfu2="$(df -h $disk2 | awk 'NR==2 {print $3 "/" $2}')"
+        echo " RAM $ramu CPU ${cpuu}% STO $dfu STO2 $dfu2 "
+    else
+        echo " RAM $ramu CPU ${cpuu}% STO $dfu "
+    fi
+}
+
+# Keyboard Lang
+keyboard(){
+    local kb="$(setxkbmap -query | awk '/layout/ {print $2}')"
+    echo " KB ${kb^^} "
+}
+
+# Currency Info
+currency(){
+    local localcurrency="USD"
+    local objcurrency="BTC"
+    local result="$(curl -s ${localcurrency}.rate.sx/1${objcurrency})"
+    echo " 1 $objcurrency = $result $localcurrency "
+}
+
+# MPC Info
+mpc_(){
+    if ps -C mpd >/dev/null; then
+        local artist="$(mpc current -f %artist%)"
+        local music="$(mpc current -f %title%)"
+        local time="$(mpc status | awk '/\[/ {print $3}')"
+        local status="$(mpc status | awk '/\[/ {print $1}')"
+        if [ "$status" = "[paused]" ]; then
+            echo " Paused $artist - $music $time |"
+        elif [ -z "$status" ]; then
+            echo ""
+        else
+            echo " Playing $artist - $music $time |"
+        fi
+    fi
+}
+
+# CMUS Info
+cmus_(){
+    if ps -C cmus >/dev/null; then
+        local artist="$(cmus-remote -Q 2>/dev/null | awk '/artist/ {sub("tag artist ", "");print}' | sed -n 1p)"
+        local music="$(cmus-remote -Q 2>/dev/null | awk '/title/ {sub("tag title ", "");print}' | sed -n 1p)"
+        local pos="$(cmus-remote -Q 2>/dev/null | awk '/position/ {sub("position ", "");print}')"
+        local duration="$(cmus-remote -Q 2>/dev/null | awk '/duration/ {sub("duration ", "");print}')"
+        local time="$((pos/60)):$((pos%60))/$((duration/60)):$((duration%60))"
+        local status="$(cmus-remote -Q 2>/dev/null | awk '/status/ {sub("status ", "");print}')"
+        if [ "$status" = "paused" ]; then
+            echo " Paused $artist - $music $time "
+        elif [ "$status" = "stopped" ]; then
+            echo ""
+        else
+            echo " Playing $artist - $music $time "
+        fi
+    fi
+}
