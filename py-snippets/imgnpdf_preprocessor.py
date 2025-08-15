@@ -7,6 +7,47 @@ from PIL import Image
 from pdf2image import convert_from_bytes
 import os
 
+"""
+Object for preprocessing images or PDFs from a local path or URL.
+
+Args:
+    path_or_url (str): Path to a local file or URL pointing to an image or PDF.
+
+Methods:
+    download():
+        Loads the file from disk or downloads it from a URL.
+        - If PDF, converts the first page to an image.
+        - Converts the image to BGR format for OpenCV.
+        Returns self for chaining.
+
+    to_grayscale():
+        Converts the processed image to grayscale.
+        Returns self for chaining.
+
+    adjust_contrast(contrast=1.5, brightness=0):
+        Adjusts contrast and brightness of the processed image.
+        - contrast (float): Multiplier for contrast.
+        - brightness (int): Added value to adjust brightness.
+        Returns self for chaining.
+
+    remove_background():
+        Applies adaptive thresholding to remove background noise.
+        Returns self for chaining.
+
+    crop_largest_contour():
+        Detects contours and crops the image to the largest contour.
+        Useful for focusing on main objects/text.
+        Returns self for chaining.
+
+    get():
+        Returns the current processed image as a pumpy array.
+
+    get_base64(format='PNG'):
+        Returns the processed image encoded in base64.
+        - format (str): Output image format, e.g., 'PNG' or 'JPEG'.
+        Converts grayscale images to RGB for proper encoding.
+"""
+
 class IMGnPDF_Preprocessor:
     def __init__(self, path_or_url):
         self.path_or_url = path_or_url
